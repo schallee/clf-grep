@@ -16,7 +16,12 @@ public class LogEntry implements Serializable
 	@SuppressWarnings("unused")
 	private static final Log logger = LogFactory.getLog(CLASS);
 	private static final long serialVersionUID = 1l;
-	private static final boolean INTERN = false;
+	private static final boolean INTERN_EVERY = false;
+	private static final boolean INTERN_IDENT = true;
+	private static final boolean INTERN_USR = true;
+	private static final boolean INTERN_METHOD = true;
+	private static final boolean INTERN_URI = false;
+	private static final boolean INTERN_PROTOCOL = true;
 	public static final LogEntry[] EMPTY_ARRAY = new LogEntry[0];
 
 	private InetAddress ip;
@@ -75,7 +80,7 @@ public class LogEntry implements Serializable
 		this.protocol = protocol;
 		this.status = status;
 		this.size = size;
-		if(INTERN)
+		if(INTERN_EVERY)
 			internStrings();
 	}
 
@@ -89,11 +94,16 @@ public class LogEntry implements Serializable
 		if(stringsInterned)
 			return;
 
-		ident = internIfNotNull(ident);
-		usr = internIfNotNull(usr);
-		method = internIfNotNull(method);
-		uri = internIfNotNull(uri);
-		protocol = internIfNotNull(protocol);
+		if(INTERN_IDENT)
+			ident = internIfNotNull(ident);
+		if(INTERN_USR)
+			usr = internIfNotNull(usr);
+		if(INTERN_METHOD)
+			method = internIfNotNull(method);
+		if(INTERN_URI)
+			uri = internIfNotNull(uri);
+		if(INTERN_PROTOCOL)
+			protocol = internIfNotNull(protocol);
 		stringsInterned = true;
 	}
 
@@ -148,7 +158,7 @@ public class LogEntry implements Serializable
 		return new LogParser().format(this);
 	}
 
-	private static boolean nullSafeEquals(Object a, Object b)
+	private static final boolean nullSafeEquals(Object a, Object b)
 	{
 		if(a == null)
 		{
@@ -161,8 +171,17 @@ public class LogEntry implements Serializable
 		return a.equals(b);
 	}
 
+	private static final boolean nullSafeEquals(boolean interned, String a, String b)
+	{
+		if(interned)
+			return (a==b);
+		return nullSafeEquals(a,b);
+	}
+
 	public boolean equals(LogEntry other)
 	{
+		if(other == null)
+			return false;
 		// do the non-strings first
 		if(!nullSafeEquals(this.ip,other.ip))
 			return false;
@@ -173,22 +192,19 @@ public class LogEntry implements Serializable
 		if(size != other.size)
 			return false;
 
-		// intern our strings if they aren't already
 		internStrings();
 		other.internStrings();
 
-		// as everything is interned now, we can use !=
-		if(ident != other.ident)
+		if(!nullSafeEquals(INTERN_IDENT, ident,other.ident))
 			return false;
-		if(usr != other.usr)
+		if(!nullSafeEquals(INTERN_USR, usr,other.usr))
 			return false;
-		if(method != other.method)
+		if(!nullSafeEquals(INTERN_METHOD, method,other.method))
 			return false;
-		if(uri != other.uri)
+		if(!nullSafeEquals(INTERN_URI,uri,other.uri))
 			return false;
-		if(protocol != other.protocol)
+		if(!nullSafeEquals(INTERN_PROTOCOL,protocol,other.protocol))
 			return false;
-
 		// nothing is different so we're equal!
 		return true;
 	}

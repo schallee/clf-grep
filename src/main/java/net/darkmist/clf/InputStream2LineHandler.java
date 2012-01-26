@@ -14,6 +14,7 @@ public class InputStream2LineHandler extends LineHandler.Chained.Abstract implem
 	private static final Class<InputStream2LineHandler> CLASS = InputStream2LineHandler.class;
 	@SuppressWarnings("unused")
 	private static final String CLASS_NAME = CLASS.getName();
+	@SuppressWarnings("unused")
 	private static final Log logger = LogFactory.getLog(CLASS);
 
 	public InputStream2LineHandler()

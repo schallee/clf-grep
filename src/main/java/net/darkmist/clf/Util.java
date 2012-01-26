@@ -3,6 +3,8 @@ package net.darkmist.clf;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -118,6 +120,40 @@ public class Util
 		return newQueue(converter, contents, 0, contents.length);
 	}
 
+	public static <T> T[] concat(T[] a, T[] b, T[] dest)
+	{
+		System.arraycopy(a,0,dest,0,a.length);
+		System.arraycopy(b,0,dest,a.length,b.length);
+		return dest;
+	}
+	
+	private static class ComparableComparator<T extends Comparable<T>> implements Comparator<T>, Serializable
+	{
+		private static final long serialVersionUID = 1l;
+		@SuppressWarnings("unchecked")
+		private static ComparableComparator singleton = new ComparableComparator();
+
+		@SuppressWarnings("unchecked")
+		static <U extends Comparable<U>> Comparator<U> instance()
+		{
+			return singleton;
+		}
+
+		private ComparableComparator()
+		{
+		}
+		
+		public int compare(T a, T b)
+		{
+			return a.compareTo(b);
+		}
+	}
+
+	public static <T extends Comparable<T>> Comparator<T> getComparableComparator()
+	{
+		return ComparableComparator.instance();
+	}
+
 	public static <T> T[] merge(T[] a, T[] b, T[] dest, Comparator<T> comparator)
 	{
 		int ai,bi,di;
@@ -125,18 +161,50 @@ public class Util
 
 		if(dest.length < dlen)
 			throw new IllegalArgumentException("Destination array is not large enough");
-		for(ai=bi=di=0;ai<a.length && bi<b.length && di<dlen;di++)
+
+		// check for simple case where one whole array goes before the other
+		if(comparator.compare(a[a.length-1],b[0]) <= 0)
+			return concat(a,b,dest);
+		if(comparator.compare(b[b.length-1],a[0]) <= 0)
+			return concat(b,a,dest);
+
+		// binarySearch for the start of one in the other
+		if(comparator.compare(a[0],b[0])<=0)
+		{	// a starts, figure out where b[0] is 
+			ai = Arrays.binarySearch(a,b[0],comparator);
+			if(ai < 0)	// ai = (-(insersion_point)-1)
+				ai = -(ai+1);
+			System.arraycopy(a,0,dest,0,ai);
+			di=ai;
+			bi=0;
+		}
+		else
+		{	// b starts, figure out where a[0] is
+			bi = Arrays.binarySearch(b,a[0],comparator);
+			if(bi < 0)	// bi = (-(insersion_point)-1)
+				bi = -(bi+1);
+			System.arraycopy(b,0,dest,0,bi);
+			di=bi;
+			ai=0;
+		}
+		if(logger.isDebugEnabled())
+			logger.debug("ai=" + ai + " bi=" + bi + " di=" + di);
+
+		// merge until we run out of one
+		for(;ai<a.length && bi<b.length;di++)
 		{
 			if(comparator.compare(a[ai],b[bi]) <= 0)
 				dest[di] = a[ai++];
 			else
 				dest[di] = b[bi++];
 		}
-		// one array has been used up here...
+
+		// one array has been used up here...copy the rest
 		if(ai<a.length)
 			System.arraycopy(a,ai,dest,di,a.length - ai);
 		else
 			System.arraycopy(b,bi,dest,di,b.length - bi);
+
 		return dest;
 	}
 

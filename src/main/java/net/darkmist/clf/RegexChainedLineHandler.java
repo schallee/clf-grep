@@ -9,7 +9,9 @@ import org.apache.commons.logging.LogFactory;
 public class RegexChainedLineHandler extends LineHandler.Chained.Abstract
 {
 	private static final Class<RegexChainedLineHandler> CLASS = RegexChainedLineHandler.class;
+	@SuppressWarnings("unused")
 	private static final String CLASS_NAME = CLASS.getName();
+	@SuppressWarnings("unused")
 	private static final Log logger = LogFactory.getLog(CLASS);
 	private Pattern pattern;
 	private transient Matcher matcher = null;

@@ -12,11 +12,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-//import net.darkmist.alib.job.MoreExecutors;
+import net.darkmist.alib.job.MoreExecutors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+@SuppressWarnings("unused")
 public class Main implements FileHandler.Factory.Recycling
 {
 	private static final Class<Main> CLASS = Main.class;
@@ -25,7 +26,7 @@ public class Main implements FileHandler.Factory.Recycling
 	private static final TimeUnit STATUS_UNIT = TimeUnit.SECONDS;
 	private static final long STATUS_TIME = 1;
 
-	private LogBatchHandler syncedBatchMerger;
+	private LogBatchHandler chainDest;
 	private Pattern usrPattern;
 	private Pattern usrLinePattern;
 	private String usr;
@@ -33,7 +34,7 @@ public class Main implements FileHandler.Factory.Recycling
 
 	private static class ThreadChain implements FileHandler
 	{
-		private SortingEntries2Batch sortingBatcher;
+		private /*Sorting*/Entries2Batch batcher;
 		private FileHandler chainInput;
 
 		/*
@@ -44,8 +45,8 @@ public class Main implements FileHandler.Factory.Recycling
 			FileToStreamHandler file2Stream;
 			FileHandler.Chained fileFilter;
 	
-			sortingBatcher = new SortingEntries2Batch(LogEntry.getDateOnlyComparator(), chainOutput);
-			filterHandler = new UserRegexChainedLogHandler(usrPattern,sortingBatcher);
+			batcher = new SortingEntries2Batch(LogEntry.getDateOnlyComparator(), chainOutput);
+			filterHandler = new UserRegexChainedLogHandler(usrPattern,batcher);
 			logStreamHandler = new LogInputStreamHandler(filterHandler);
 			file2Stream = new PossibleGzipFileToStreamHandler(logStreamHandler);
 			fileFilter = new IndexedLogFileHandler(usrPattern, file2Stream);
@@ -56,15 +57,14 @@ public class Main implements FileHandler.Factory.Recycling
 		ThreadChain(Pattern usrLinePattern, Pattern usrPattern, LogBatchHandler chainOutput)
 		{
 			LogHandler filterLogHandler;
-			LogInputStreamHandler logStreamHandler;
 			Line2LogHandler line2LogHandler;
 			RegexChainedLineHandler filterLineHandler;
 			InputStream2LineHandler inputStream2LineHandler;
 			FileToStreamHandler file2Stream;
 			FileHandler.Chained fileFilter;
 	
-			sortingBatcher = new SortingEntries2Batch(LogEntry.getDateOnlyComparator(), chainOutput);
-			filterLogHandler = new UserRegexChainedLogHandler(usrPattern,sortingBatcher);
+			batcher = new /*Sorting*/Entries2Batch(/*LogEntry.getDateOnlyComparator(),*/ chainOutput);
+			filterLogHandler = new UserRegexChainedLogHandler(usrPattern,batcher);
 			line2LogHandler = new Line2LogHandler(filterLogHandler);
 			filterLineHandler = new RegexChainedLineHandler(usrLinePattern,line2LogHandler);
 			inputStream2LineHandler = new InputStream2LineHandler(filterLineHandler);
@@ -77,7 +77,7 @@ public class Main implements FileHandler.Factory.Recycling
 		public void handleFile(File file)
 		{
 			chainInput.handleFile(file);
-			sortingBatcher.flush();
+			batcher.flush();
 		}
 	}
 
@@ -96,7 +96,7 @@ public class Main implements FileHandler.Factory.Recycling
 	{
 		if(threadChains.size() > 0)
 			return threadChains.remove(0);
-		return new ThreadChain(usrLinePattern, usrPattern, syncedBatchMerger);
+		return new ThreadChain(usrLinePattern, usrPattern, chainDest);
 	}
 
 	public synchronized void recycleFileHandler(FileHandler handler)
@@ -117,8 +117,8 @@ public class Main implements FileHandler.Factory.Recycling
 
 		// convert fileNames to Files and put them in a Queue
 		files = Util.newQueue(Util.getStringToFileConverter(), fileNames, off, len);
-		executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-		//executor = MoreExecutors.newCurrentThreadPool();
+		//executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		executor = MoreExecutors.newCurrentThreadPool();
 
 		traverser = new DirTraverser(files, new ExecutorFileHandler(executor, this));
 
@@ -155,7 +155,8 @@ public class Main implements FileHandler.Factory.Recycling
 		String usrRegex;
 		String usrLineRegex;
 		String outFile;
-		MergingBatchHandler batchMerger;
+		//MergingBatchHandler batchMerger;
+		SortingBatchCombiner batchMerger;
 
 		if(args.length < 3)
 			usage("Insufficient arguments");
@@ -181,8 +182,9 @@ public class Main implements FileHandler.Factory.Recycling
 			out = new PrintWriter(outFile);
 
 		printer = new PrintingLogHandler(out);
-		batchMerger = new MergingBatchHandler(new Batch2Entries(printer), LogEntry.getDateOnlyComparator());
-		syncedBatchMerger = LogBatchHandler.Utils.synchronizedLogBatchHandler(batchMerger);
+		//batchMerger = new MergingBatchHandler(new Batch2Entries(printer), LogEntry.getDateOnlyComparator());
+		batchMerger = new SortingBatchCombiner(new Batch2Entries(printer), LogEntry.getDateOnlyComparator());
+		chainDest = LogBatchHandler.Utils.synchronizedLogBatchHandler(batchMerger);
 
 		// figure the input and let it rip
 		handleFiles(args,2,args.length-2);

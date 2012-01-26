@@ -56,14 +56,12 @@ public class LogParser
 	private static final String REGEX_NO_SP_URI_CHAR = "[^ ]";
 	private static final String REGEX_NO_SP_REQ_LINE = "(" + REGEX_METH + ") (" + REGEX_NO_SP_URI_CHAR + "+) (" + REGEX_PROTO + ")";
 	private static final String REGEX_NO_SP = REGEX_IP_USER + REGEX_TIME + "\"" + REGEX_NO_SP_REQ_LINE + "\"" + REGEX_STAT_SIZE;
-	@SuppressWarnings("unused")
 	private static final Pattern PATTERN_NO_SP = Pattern.compile(REGEX_NO_SP);
 
 	// allow anything which requires the regex to back track
 	private static final String REGEX_BACK_TRACK_URI_CHAR = ".";
 	private static final String REGEX_BACK_TRACK_REQ_LINE = "(" + REGEX_METH + ") (" + REGEX_BACK_TRACK_URI_CHAR + "+) (" + REGEX_PROTO + ")";
 	private static final String REGEX_BACK_TRACK = REGEX_IP_USER + REGEX_TIME + "\"" + REGEX_BACK_TRACK_REQ_LINE + "\"" + REGEX_STAT_SIZE;
-	@SuppressWarnings("unused")
 	private static final Pattern PATTERN_BACK_TRACK = Pattern.compile(REGEX_BACK_TRACK);
 
 	// border manager errors: (bad request line)
@@ -72,7 +70,6 @@ public class LogParser
 	private static final String REGEX_BM_URI_CHAR = "[^\"]";
 	private static final String REGEX_BM_REQ_LINE = "(" + REGEX_BM_METH + ") (" + REGEX_BM_URI_CHAR + "+)";
 	private static final String REGEX_BM = REGEX_IP_USER + REGEX_TIME + "\"" + REGEX_BM_REQ_LINE + "\"" + REGEX_STAT_SIZE;
-	@SuppressWarnings("unused")
 	private static final Pattern PATTERN_BM = Pattern.compile(REGEX_BM);
 
 	private static final int PART_IP = 1;
@@ -135,6 +132,7 @@ public class LogParser
 	private transient Date lastDate = null;
 	//private transient Map<String,Date> dateCache = newWeakCache();
 
+	@SuppressWarnings("unused")
 	private static <N,V> Map<N,V> newHardCache()
 	{
 		return new HashMap<N,V>();
@@ -145,6 +143,7 @@ public class LogParser
 		return new HashMap<N,V>(size);
 	}
 
+	@SuppressWarnings("unchecked")
 	private static <N,V> Map<N,V> newWeakCache()
 	{
 		return new ReferenceMap(ReferenceMap.WEAK, ReferenceMap.WEAK);
@@ -172,7 +171,7 @@ public class LogParser
 			if(logger.isDebugEnabled())
 				logger.debug("Getting TimeZone GMT"+str);
 			tz = TimeZone.getTimeZone("GMT"+str);
-			tzCache.put(str.intern(),tz);
+			tzCache.put(str,tz);
 		}
 		return tz;
 	}
@@ -190,7 +189,7 @@ public class LogParser
 			if(mon == null)
 				throw new LogFormatException("Unknown month: " + str);
 			ret = mon.getCalendarValue();
-			monthCache.put(str.intern(), ret);
+			monthCache.put(str, ret);
 		}
 		return ret;
 	}
@@ -424,7 +423,7 @@ public class LogParser
 		if((addr = ipCache.get(ip))==null)
 		{
 			addr = InetAddress.getByName(ip);
-			ipCache.put(ip.intern(),addr);
+			ipCache.put(ip,addr);
 		}
 		return addr;
 	}
