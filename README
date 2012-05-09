@@ -1,0 +1,7 @@
+Common log format parsing and grepping by user name. Originally this
+was used to index gigs of proxy logs and then grep for individual users.
+
+If you find it useful, please drop me a note on github as it will
+encourage me to get other code pushed as well.
+
+Thanks!
